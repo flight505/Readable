@@ -1,0 +1,39 @@
+[project]
+name = "readable"
+version = "0.1.0"
+description = "Text-to-speech reader using Kokoro TTS API"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31.0",
+    "rumps>=0.4.0",
+    "pygame>=2.5.0",
+    "pyperclip>=1.8.2",
+    "psutil>=5.9.0",
+]
+
+[project.scripts]
+readable = "readable.app_optimized:main"
+readable-basic = "readable.app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers -p no:warnings"
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (may require external services)",
+    "slow: Slow running tests (skipped by default)"
+]
+# Configure test output directory
+cache_dir = "test_outputs/.pytest_cache"
