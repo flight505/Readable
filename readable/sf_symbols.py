@@ -15,6 +15,31 @@ class SFSymbols:
 
     _temp_dir = Path(tempfile.gettempdir()) / "readable_icons"
 
+    # Path to custom menu bar icon assets
+    _assets_dir = Path(__file__).parent.parent / "assets"
+
+    @classmethod
+    def get_custom_menu_icon(cls) -> str | None:
+        """
+        Get the custom Readable menu bar icon.
+
+        Returns path to the custom icon if available, otherwise None.
+        The icon should be a template image (black on transparent).
+        """
+        # Check for @2x version first (Retina), then @1x
+        icon_2x = cls._assets_dir / "readable_icon@2x.png"
+        icon_1x = cls._assets_dir / "readable_icon.png"
+
+        if icon_2x.exists():
+            logger.debug(f"Using custom menu icon: {icon_2x}")
+            return str(icon_2x)
+        elif icon_1x.exists():
+            logger.debug(f"Using custom menu icon: {icon_1x}")
+            return str(icon_1x)
+        else:
+            logger.debug("Custom menu icon not found, falling back to SF Symbol")
+            return None
+
     @classmethod
     def create_icon(cls, symbol_name: str, size: int = 16) -> str:
         """
@@ -138,6 +163,7 @@ class SFSymbols:
 # Common SF Symbols for the app
 SYMBOLS = {
     # Main menu bar (speaker with sound waves - perfect for TTS!)
+    # Note: Custom icon available via SFSymbols.get_custom_menu_icon()
     "menu_bar": "speaker.wave.2",
 
     # Actions

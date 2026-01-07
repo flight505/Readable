@@ -12,7 +12,7 @@ A **highly optimized** macOS menu bar app for reading text aloud using the Kokor
 - 📖 **Recent Readings** - Instant replay from history
 - 🎙️ **8 Voices** - US/UK accents, male/female
 - ⚡ **Variable Speed** - 0.75x to 1.5x playback
-- 🎯 **Native macOS** - SF Symbols, dark/light mode
+- 🎯 **Native macOS** - Custom menu bar icon, dark/light mode
 
 ## Installation
 
@@ -63,14 +63,14 @@ tail -f ~/.readable/logs/launchd.error.log  # Service errors
 ## Usage
 
 1. **Copy text** to clipboard (⌘C)
-2. **Click speaker icon** in menu bar
+2. **Click the book icon** in menu bar
 3. **Select "Read Clipboard"**
 4. **Listen!**
 
 ### Menu Structure
 
 ```
-🔊 Readable
+📖 Readable
 ├── 􀈕 Read Clipboard (⌘R)
 ├── 􀐿 Recent ▸
 ├── ─────────────────────
@@ -130,7 +130,7 @@ grep ERROR ~/.readable/logs/readable_*.log  # Errors only
 
 **Common issues:**
 - **App not starting** → Check `~/.readable/logs/launchd.error.log`
-- **Menu icon not appearing** → Verify macOS 11.0+ for SF Symbols
+- **Menu icon not appearing** → Check `assets/` folder contains icon PNGs
 - **Audio not playing** → Check macOS audio permissions
 - **TTS errors** → Verify server at configured URL
 

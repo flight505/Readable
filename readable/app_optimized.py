@@ -46,9 +46,13 @@ class ReadableApp(rumps.App):
         self.config = Config()
         logger.info(f"Configuration loaded: TTS URL={self.config.tts_url}")
 
-        # Create SF Symbol icon for menu bar (returns path to temp PNG file)
-        menu_bar_icon = SFSymbols.create_icon(SYMBOLS["menu_bar"])
-        logger.debug(f"Menu bar icon created: {menu_bar_icon}")
+        # Use custom menu bar icon if available, otherwise fall back to SF Symbol
+        menu_bar_icon = SFSymbols.get_custom_menu_icon()
+        if menu_bar_icon:
+            logger.info(f"Using custom menu bar icon: {menu_bar_icon}")
+        else:
+            menu_bar_icon = SFSymbols.create_icon(SYMBOLS["menu_bar"])
+            logger.debug(f"Using SF Symbol menu bar icon: {menu_bar_icon}")
 
         super(ReadableApp, self).__init__(
             name="",  # Empty name - icon only

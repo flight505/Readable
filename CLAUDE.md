@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Readable** is a macOS menu bar TTS (text-to-speech) application that reads clipboard text aloud using the Kokoro TTS API running on a remote ml-server (via Tailscale). It features intelligent caching, parallel processing, and a native macOS interface with SF Symbols.
+**Readable** is a macOS menu bar TTS (text-to-speech) application that reads clipboard text aloud using the Kokoro TTS API running on a remote ml-server (via Tailscale). It features intelligent caching, parallel processing, and a native macOS interface with a custom book+soundwave icon.
 
 **Key constraint:** External Kokoro TTS API with 750-800 character limit per request, requires chunking long texts.
 
@@ -141,9 +141,9 @@ Clipboard → Chunker → Cache Check → [Cache Hit OR ML-Server API] → Base6
 - Sanitizes text input
 
 **sf_symbols.py** (macOS Icons)
-- Converts SF Symbol names to NSImage PNG files
-- Menu bar icon: `speaker.wave.2` (not book.fill - too heavy)
-- Temp storage: `/tmp/readable_icons/`
+- Provides custom menu bar icon from `assets/readable_icon*.png`
+- Falls back to SF Symbols if custom icon not found
+- Converts SF Symbol names to NSImage PNG files (for fallback)
 - Uses logger (not print statements)
 
 **protocols.py** (Type Protocols)
@@ -197,8 +197,11 @@ Clipboard → Chunker → Cache Check → [Cache Hit OR ML-Server API] → Base6
 /tmp/tmpXXXX/                  # Auto-deleted on quit
 └── chunk_N.wav                # Temp playback files (pygame requirement)
 
-/tmp/readable_icons/           # SF Symbol PNG cache
-└── {symbol}_{size}pt_{weight}.png
+assets/                        # Custom menu bar icon (in project root)
+├── readable_icon.png          # @1x (18x18)
+├── readable_icon@2x.png       # @2x (36x36) - used by default
+├── readable_icon@3x.png       # @3x (54x54)
+└── readable_icon_final.svg    # Source SVG
 ```
 
 ## Recent Improvements & Fixes
@@ -244,9 +247,10 @@ Clipboard → Chunker → Cache Check → [Cache Hit OR ML-Server API] → Base6
 **Root cause:** `_update_status_text()` modified rumps MenuItem from background threads (called from `_read_clipboard_background`, `_playback_loop`, progress callbacks). macOS AppKit doesn't allow UI modifications from non-main threads.
 **Fix:** Wrapped UI update in `AppHelper.callAfter(_do_update)` to dispatch to main thread.
 
-### SF Symbols Menu Icon
-**Use:** `speaker.wave.2` (audio-appropriate, clean)
-**Avoid:** `book.fill` (too heavy/detailed for menu bar)
+### Custom Menu Bar Icon
+**Design:** Open book with sound waves (conveys "reading aloud")
+**Location:** `assets/readable_icon*.png` (template images)
+**Fallback:** SF Symbol `speaker.wave.2` if custom icon missing
 
 ## Testing Strategy
 
@@ -309,7 +313,7 @@ POST /tts/synthesize
 
 ## Common Gotchas
 
-1. **Menu bar icon not appearing:** Check if rumps template mode is enabled, icon file exists in temp dir.
+1. **Menu bar icon not appearing:** Check `assets/readable_icon@2x.png` exists, rumps template mode enabled.
 
 2. **Audio not playing:** Check pygame.mixer.init(), verify temp files created, check macOS audio permissions.
 
@@ -328,6 +332,6 @@ POST /tts/synthesize
 
 ## macOS Requirements
 
-- macOS 11.0+ (Big Sur or later) for SF Symbols
+- macOS 11.0+ (Big Sur or later)
 - Python 3.11+
 - Tailscale for ml-server access
