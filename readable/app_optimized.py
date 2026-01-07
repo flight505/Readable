@@ -3,6 +3,7 @@
 import rumps
 import pyperclip
 from threading import Thread
+from PyObjCTools import AppHelper
 from .chunker import TextChunker
 from .tts_client import KokoroTTSClient
 from .audio_player import AudioPlayer
@@ -438,28 +439,32 @@ class ReadableApp(rumps.App):
         self._update_status_text("Complete")
 
     def _update_status_text(self, text: str):
-        """Update status menu item with appropriate SF Symbol."""
-        # SF Symbols Unicode for status icons
-        icon_map = {
-            "Idle": "􀆺",          # moon.zzz.fill
-            "Processing": "􀍟",   # gearshape.fill
-            "Generated": "􀁣",    # checkmark.circle.fill
-            "Playing": "􀊄",      # play.circle.fill
-            "Paused": "􀊆",       # pause.circle.fill
-            "Complete": "􀁣",     # checkmark.circle.fill
-            "Error": "􀀲",        # xmark.circle.fill
-            "Failed": "􀀲",       # xmark.circle.fill
-            "No": "􀀲",           # xmark.circle.fill (for "No text")
-            "Voice": "􀑪",        # waveform
-            "Speed": "􀐱",        # gauge
-            "Cache": "􀁣",        # checkmark
-        }
+        """Update status menu item (thread-safe via main thread dispatch)."""
+        def _do_update():
+            # SF Symbols Unicode for status icons
+            icon_map = {
+                "Idle": "􀆺",          # moon.zzz.fill
+                "Processing": "􀍟",   # gearshape.fill
+                "Generated": "􀁣",    # checkmark.circle.fill
+                "Playing": "􀊄",      # play.circle.fill
+                "Paused": "􀊆",       # pause.circle.fill
+                "Complete": "􀁣",     # checkmark.circle.fill
+                "Error": "􀀲",        # xmark.circle.fill
+                "Failed": "􀀲",       # xmark.circle.fill
+                "No": "􀀲",           # xmark.circle.fill (for "No text")
+                "Voice": "􀑪",        # waveform
+                "Speed": "􀐱",        # gauge
+                "Cache": "􀁣",        # checkmark
+            }
 
-        # Extract base status (first word)
-        base_status = text.split()[0] if text else "Idle"
-        icon = icon_map.get(base_status, "􀆺")
+            # Extract base status (first word)
+            base_status = text.split()[0] if text else "Idle"
+            icon = icon_map.get(base_status, "􀆺")
 
-        self._status_item.title = f"{icon} Status: {text}"
+            self._status_item.title = f"{icon} Status: {text}"
+
+        # Dispatch to main thread for thread-safe UI update
+        AppHelper.callAfter(_do_update)
 
 
 def main():

@@ -163,10 +163,10 @@ Clipboard → Chunker → Cache Check → [Cache Hit OR ML-Server API] → Base6
 
 ## Critical Threading Rules
 
-**macOS/rumps enforces main-thread-only UI operations.** Violating this causes crashes.
+**macOS/rumps enforces main-thread-only UI operations.** Violating this causes freezes/crashes.
 
 ### ✅ Safe (from background threads):
-- `self._update_status_text()` - Updates menu bar status
+- `self._update_status_text()` - Uses `AppHelper.callAfter()` to dispatch to main thread
 - `logger.info()` / `logger.error()` - Logging
 - File I/O, network requests
 - Audio playback operations
@@ -175,9 +175,11 @@ Clipboard → Chunker → Cache Check → [Cache Hit OR ML-Server API] → Base6
 - `rumps.notification()`
 - `rumps.alert()`
 - Any NSWindow/NSAlert operations
-- Menu item creation/modification
+- Direct menu item modification (use `AppHelper.callAfter()` wrapper)
 
-**Pattern:** All clipboard processing happens in `_read_clipboard_background()` daemon thread, which only calls thread-safe operations.
+**Pattern:** All clipboard processing happens in `_read_clipboard_background()` daemon thread. UI updates are dispatched to main thread via `PyObjCTools.AppHelper.callAfter()`.
+
+**Key fix:** `_update_status_text()` wraps UI modification in `AppHelper.callAfter(_do_update)` to ensure thread-safe execution on main thread.
 
 ## File Storage Locations
 
@@ -236,6 +238,11 @@ Clipboard → Chunker → Cache Check → [Cache Hit OR ML-Server API] → Base6
 ### Quit Button Bug (Fixed)
 **Problem:** App froze when clicking quit while clearing cache.
 **Fix:** Cache clearing moved to background thread in `app_optimized.py`.
+
+### UI Thread Safety (Fixed)
+**Problem:** App froze when reading clipboard—menu stayed open, entire system unresponsive.
+**Root cause:** `_update_status_text()` modified rumps MenuItem from background threads (called from `_read_clipboard_background`, `_playback_loop`, progress callbacks). macOS AppKit doesn't allow UI modifications from non-main threads.
+**Fix:** Wrapped UI update in `AppHelper.callAfter(_do_update)` to dispatch to main thread.
 
 ### SF Symbols Menu Icon
 **Use:** `speaker.wave.2` (audio-appropriate, clean)
