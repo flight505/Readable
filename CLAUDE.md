@@ -94,11 +94,19 @@ Clipboard → Chunker → Cache Check → [Cache Hit OR ML-Server API] → Base6
 - Max 750 chars per chunk (API limit is 800, safety margin)
 - Returns list of text chunks
 
-**tts_client.py** (API Client)
+**tts_client.py** (Remote API Client)
 - Calls Kokoro TTS API on ml-server
 - Handles Base64 decoding of WAV response
 - Integrates with cache for lookups/storage
 - Timeout: 30 seconds per request
+
+**local_tts_client.py** (Local MLX Client)
+- Alternative TTS using local Kokoro MLX model
+- Implements same TTSClient protocol as remote client
+- Lazy loads model on first synthesis (~1-2s initial load)
+- Converts mx.array audio to WAV bytes via soundfile
+- Requires numpy and soundfile for audio conversion
+- Model path configurable via config or env var
 
 **cache.py** (Audio Caching)
 - LRU disk cache with SHA256 hashing
@@ -133,12 +141,26 @@ Clipboard → Chunker → Cache Check → [Cache Hit OR ML-Server API] → Base6
 - Environment variable overrides
 - Defaults for all settings
 - Validates and handles errors gracefully
+- New options:
+  - `use_local_tts`: Toggle local/remote TTS (default: false)
+  - `local_model_path`: Path to kokoro-tts-mlx model
+  - `clean_text`: Enable text cleaning (default: true)
 
 **validator.py** (Input Validation)
 - DoS prevention (1M character limit)
 - Chunk count limits (100 max)
 - Binary data detection
-- Sanitizes text input
+- Sanitizes text input with text_cleaner integration
+
+**text_cleaner.py** (Text Cleaning)
+- Lightweight cleaning optimized for clipboard TTS
+- Removes URLs (http/https and www)
+- Simplifies long file paths to basename
+- Converts markdown links: `[text](url)` → `text`
+- Naturalizes inline code: `getUserData()` → "get user data"
+- Removes markdown bold/italic markers
+- Normalizes whitespace
+- Optional aggressive mode removes code blocks, LaTeX, HTML
 
 **sf_symbols.py** (macOS Icons)
 - Provides custom menu bar icon from `assets/readable_icon*.png`

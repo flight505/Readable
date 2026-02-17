@@ -89,7 +89,9 @@ class InputValidator:
         # Remove null bytes
         text = text.replace('\x00', '')
 
-        # Normalize whitespace (optional)
-        # text = ' '.join(text.split())
+        # Apply text cleaning if enabled
+        if self.config.get("clean_text", True):
+            from .text_cleaner import clean_text_for_tts
+            text = clean_text_for_tts(text)
 
         return text

@@ -6,6 +6,7 @@ from threading import Thread
 from PyObjCTools import AppHelper
 from .chunker import TextChunker
 from .tts_client import KokoroTTSClient
+from .local_tts_client import LocalTTSClient
 from .audio_player import AudioPlayer
 from .parallel_tts import ParallelTTSGenerator
 from .sf_symbols import SFSymbols, SYMBOLS
@@ -63,7 +64,11 @@ class ReadableApp(rumps.App):
 
         logger.info("Initializing components...")
         self.chunker = TextChunker(max_chars=750)
-        self.tts_client = KokoroTTSClient(config=self.config)
+
+        # Initialize TTS client based on config
+        self.use_local_tts = self.config.use_local_tts
+        self.tts_client = self._create_tts_client()
+
         self.parallel_generator = ParallelTTSGenerator(
             client=self.tts_client,
             max_workers=self.config.max_workers
@@ -103,6 +108,21 @@ class ReadableApp(rumps.App):
         # Recent menu (will be populated dynamically)
         recent_menu = [rumps.MenuItem("(No recent readings)", callback=None)]
 
+        # TTS Mode menu
+        tts_mode_menu = [
+            rumps.MenuItem(
+                "􀆪 Remote (ml-server)",
+                callback=lambda sender: self.set_tts_mode(False, sender)
+            ),
+            rumps.MenuItem(
+                "􀟜 Local (MLX)",
+                callback=lambda sender: self.set_tts_mode(True, sender)
+            ),
+        ]
+        # Set initial state
+        tts_mode_menu[0].state = not self.use_local_tts
+        tts_mode_menu[1].state = self.use_local_tts
+
         # Clean Unicode symbols for menu items
         self.menu = [
             rumps.MenuItem("􀈕 Read Clipboard (⌘R)", callback=self.read_clipboard),
@@ -114,6 +134,7 @@ class ReadableApp(rumps.App):
             rumps.separator,
             ["􀑪 Voice", voice_menu],
             ["􀐱 Speed", speed_menu],
+            ["🖥️ TTS Mode", tts_mode_menu],
             rumps.separator,
             rumps.MenuItem("􀆺 Status: Idle", callback=None),
             rumps.MenuItem("􀐱 Cache Stats", callback=self.show_cache_stats),
@@ -124,9 +145,50 @@ class ReadableApp(rumps.App):
 
         self._status_item = self.menu["􀆺 Status: Idle"]
         self._recent_menu = self.menu["􀐿 Recent"]
+        self._tts_mode_menu = self.menu["🖥️ TTS Mode"]
 
         # Update recent menu on startup
         self._update_recent_menu()
+
+    def _create_tts_client(self):
+        """Create the appropriate TTS client based on configuration."""
+        if self.use_local_tts:
+            local_client = LocalTTSClient(config=self.config)
+            if local_client.is_available():
+                logger.info("Using local MLX TTS client")
+                return local_client
+            else:
+                logger.warning(
+                    f"Local model not found at {self.config.local_model_path}, "
+                    "falling back to remote TTS"
+                )
+                self.use_local_tts = False
+
+        logger.info("Using remote TTS client")
+        return KokoroTTSClient(config=self.config)
+
+    def set_tts_mode(self, use_local: bool, sender):
+        """Switch between local and remote TTS mode."""
+        if use_local == self.use_local_tts:
+            return  # No change
+
+        self.use_local_tts = use_local
+
+        # Recreate TTS client
+        self.tts_client = self._create_tts_client()
+        self.parallel_generator = ParallelTTSGenerator(
+            client=self.tts_client,
+            max_workers=self.config.max_workers
+        )
+
+        # Update menu checkmarks
+        for item in self._tts_mode_menu:
+            item.state = False
+        sender.state = True
+
+        mode_name = "Local (MLX)" if self.use_local_tts else "Remote (ml-server)"
+        self._update_status_text(f"TTS Mode: {mode_name}")
+        logger.info(f"Switched to {'local' if use_local else 'remote'} TTS mode")
 
     def set_voice(self, voice_id: str, sender):
         """Change TTS voice."""
@@ -190,6 +252,10 @@ class ReadableApp(rumps.App):
             raise ValidationError(error_msg)
 
         self._update_status_text("Processing...")
+
+        # Clean text for TTS (removes URLs, normalizes code, etc.)
+        text = self.validator.sanitize_text(text)
+        logger.info(f"Text cleaned: {len(text)} characters after sanitization")
 
         # Chunk text
         logger.info("Chunking text...")

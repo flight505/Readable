@@ -24,6 +24,11 @@ class Config:
         "default_speed": 1.0,
         "cache_max_size_mb": 100,
         "history_max_size": 50,
+        # Local TTS settings
+        "use_local_tts": False,  # Toggle local/remote TTS
+        "local_model_path": "/Users/jesper/Projects/Dev_projects/sonic-workspace/models/kokoro-tts-mlx",
+        # Text cleaning settings
+        "clean_text": True,  # Enable text cleaning for TTS
     }
 
     def __init__(self, config_file: Optional[Path] = None):
@@ -56,6 +61,9 @@ class Config:
             "tts_url": os.getenv("KOKORO_TTS_URL"),
             "max_text_length": os.getenv("READABLE_MAX_TEXT_LENGTH"),
             "max_workers": os.getenv("READABLE_MAX_WORKERS"),
+            "use_local_tts": os.getenv("READABLE_USE_LOCAL_TTS"),
+            "local_model_path": os.getenv("READABLE_LOCAL_MODEL_PATH"),
+            "clean_text": os.getenv("READABLE_CLEAN_TEXT"),
         }
 
         for key, value in env_overrides.items():
@@ -66,6 +74,8 @@ class Config:
                         config[key] = int(value)
                     elif key in ["default_speed"]:
                         config[key] = float(value)
+                    elif key in ["use_local_tts", "clean_text"]:
+                        config[key] = value.lower() in ("true", "1", "yes")
                     else:
                         config[key] = value
                     logger.info(f"Config override from env: {key}={value}")
@@ -122,3 +132,18 @@ class Config:
     def default_speed(self) -> float:
         """Get default speed."""
         return self.data["default_speed"]
+
+    @property
+    def use_local_tts(self) -> bool:
+        """Get local TTS mode setting."""
+        return self.data["use_local_tts"]
+
+    @property
+    def local_model_path(self) -> str:
+        """Get local model path."""
+        return self.data["local_model_path"]
+
+    @property
+    def clean_text(self) -> bool:
+        """Get text cleaning setting."""
+        return self.data["clean_text"]
